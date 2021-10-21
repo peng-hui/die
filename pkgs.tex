@@ -1,17 +1,18 @@
-\input{warning}
+% \input{warning}
 
 \usepackage[hyphens]{url}
+\urlstyle{same}
 \usepackage[breaklinks,colorlinks]{hyperref}
-\usepackage[usenames,dvipsnames]{xcolor}
+\usepackage{xcolor}
 \hypersetup{citecolor=blue,linkcolor=blue}
-\usepackage{amsmath,amsopn,amssymb}
+\usepackage{amsmath,amsopn}
 \usepackage{subfigure}
 \usepackage{endnotes,microtype,xspace,graphicx,fancyvrb,multirow}
 \usepackage{booktabs}
 \usepackage{array,underscore,relsize}
 \usepackage[T1]{fontenc}
-\usepackage{times}
-\usepackage{fancyhdr,lastpage}
+% \usepackage{times}
+\usepackage{fancyhdr,totpages}
 \usepackage{enumitem}
 \usepackage[labelfont=bf,font=small,skip=5pt]{caption}
 \pagestyle{fancy}
@@ -24,10 +25,17 @@
 \usepackage{siunitx}
 
 % pseudo code
-\usepackage{minted}
+\usepackage[cache=false]{minted} %% no need of the outputdir for VScode/Overleaf user
+\providecommand*{\listingautorefname}{Listing} %% define an autoref 
+% make minted listing and lstlisting share the same counter
+\AtBeginEnvironment{listing}{\setcounter{listing}{\value{lstlisting}}} 
+\AtEndEnvironment{listing}{\stepcounter{lstlisting}}
 
 % balance bibliography
 \usepackage{balance}
 
 % use \num{123456} -> 123,456
 \sisetup{group-separator={,},group-minimum-digits={3},output-decimal-marker={.}}
+
+% comment environment
+\usepackage{verbatim}

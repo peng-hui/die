@@ -1,6 +1,7 @@
 MAIN ?= p
 DIFF ?= HEAD^
-CODE := $(addsuffix .tex,$(filter-out %.tex,$(wildcard code/*)))
+CODE := 
+#$(addsuffix .tex,$(filter-out %.tex,$(wildcard code/*)))
 FIGS := $(patsubst %.svg,%.pdf,$(wildcard fig/*.svg))
 ODGS := $(patsubst %.odg,%.pdf,$(wildcard fig/*.odg))
 PLOT := $(patsubst %.gp,%.tex,$(wildcard data/*.gp))
@@ -9,9 +10,22 @@ LTEX := --latex-args="-synctex=1 -shell-escape"
 BTEX := --bibtex-args="-min-crossrefs=99"
 SHELL:= $(shell echo $$SHELL)
 
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+  INKSCAPE=/Applications/Inkscape.app/Contents/Resources/bin/inkscape
+  SOFFICE=/Applications/LibreOffice.app/Contents/MacOS/soffice
+  SED=sed -i ""
+else
+  INKSCAPE=inkscape
+  SOFFICE=soffice
+  SED=sed -i
+endif
+
 all: $(DEPS) ## generate a pdf
+	@$(SED) 's/\\usepackage\[cache=false\]{minted}/\\usepackage\[cache=false,outputdir=latex.out\]{minted}/g' pkgs.tex
 	@TEXINPUTS="sty:" bin/latexrun $(LTEX) $(BTEX) $(MAIN)
 	cp latex.out/$(MAIN).synctex.gz .
+	@$(SED) 's/\\usepackage\[cache=false,outputdir=latex.out\]{minted}/\\usepackage\[cache=false\]{minted}/g' pkgs.tex
 
 submit: $(DEPS) ## proposal function
 	@for f in $(wildcard submit-*.tex); do \
@@ -37,31 +51,30 @@ code/fmt.tex: ## generate color table
 	pygmentize -f latex -S default > $@
 
 fig/%.pdf: fig/%.svg ## generate pdf from svg
-	bin/svg2pdf.sh ${CURDIR}/$^ ${CURDIR}/$@
+	$(INKSCAPE) --without-gui -f ${CURDIR}/$^ -D -A ${CURDIR}/$@
 
 fig/%.pdf: fig/%.odg ## generate pdf from LibreOffice Draw
-	bin/odg2pdf.sh $^ $@
+	$(SOFFICE) --convert-to pdf $< --outdir $(@D)
+	pdfcrop $@ $@
 
 data/%.tex: data/%.gp ## generate plot
 	gnuplot $^
 
-data/%.pdf: data/%.py ## generate plot
-	python3 $^
-
 draft: $(DEPS) ## generate pdf with a draft info
 	echo -e '\\newcommand*{\\DRAFT}{}' >> rev.tex
-	@TEXINPUTS="sty:" bin/latexrun $(BTEX) $(MAIN)
+	@TEXINPUTS="sty:" bin/latexrun $(LTEX) $(BTEX) $(MAIN)
 
 watermark: $(DEPS) ## generate pdf with a watermark
 	echo -e '\\usepackage[firstpage]{draftwatermark}' >> rev.tex
-	@TEXINPUTS="sty:" bin/latexrun $(BTEX) $(MAIN)
+	@TEXINPUTS="sty:" bin/latexrun $(LTEX) $(BTEX) $(MAIN)
 
 spell: ## run a spell check
-	@for i in *.tex fig/*.tex; do bin/aspell.sh tex $$i; done
+	@for i in *.tex; do bin/aspell.sh tex $$i; done
 	@for i in *.tex; do bin/double.pl $$i; done
 	@for i in *.tex; do bin/abbrv.pl  $$i; done
 	@bin/hyphens.sh *.tex
-	@pdftotext $(MAIN).pdf /dev/stdout | grep '??'
+	@bin/shortmonth.sh *.tex
+	@pdftotext $(MAIN).pdf /dev/stdout | grep '??' | cat
 	@for i in fig/*.svg; do bin/aspell.sh svg $$i; done
 	@for i in code/*.c; do bin/aspell.sh code $$i; done
 
@@ -75,7 +88,7 @@ clean: ## clean up
 
 distclean: clean ## clean up completely
 	rm -f code/*.tex
-	rm -rf _minted_p
+	rm -rf _minted-p
 
 abstract.txt: abstract.tex $(MAIN).tex ## generate abstract.txt
 	@bin/mkabstract $(MAIN).tex $< | fmt -w72 > $@
